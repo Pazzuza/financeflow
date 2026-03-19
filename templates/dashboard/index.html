@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — FinanceFlow{% endblock %}
+
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
+    <div>
+      <h1 style="font-size:24px;font-weight:800;color:white;">Olá, {{ user.name.split()[0] }} 👋</h1>
+      <p style="font-size:14px;color:#94a3b8;">{{ today.strftime('%A, %d de %B de %Y') }}</p>
+    </div>
+    <a href="/transactions/new" class="btn-primary">
+      <span style="font-size:18px;">+</span> Nova transação
+    </a>
+  </div>
+
+  <!-- Alerts -->
+  {% for alert in alerts %}
+  <div class="alert-box" style="margin-bottom:12px;">
+    <div style="font-weight:600;font-size:14px;color:#fca5a5;">{{ alert.title }}</div>
+    <div style="font-size:13px;color:#94a3b8;margin-top:2px;">{{ alert.message }}</div>
+  </div>
+  {% endfor %}
+
+  <!-- Summary Cards -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:28px;">
+    <div class="card stat-card">
+      <div style="font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">💰 Receitas</div>
+      <div style="font-size:28px;font-weight:800;" class="amount-positive">R$ {{ "%.2f"|format(summary.income)|replace(".", ",") }}</div>
+      <div style="font-size:12px;color:#94a3b8;margin-top:4px;">Este mês</div>
+    </div>
+    <div class="card stat-card">
+      <div style="font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">💸 Despesas</div>
+      <div style="font-size:28px;font-weight:800;" class="amount-negative">R$ {{ "%.2f"|format(summary.expense)|replace(".", ",") }}</div>
+      <div style="font-size:12px;color:#94a3b8;margin-top:4px;">Este mês</div>
+    </div>
+    <div class="card stat-card">
+      <div style="font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">📊 Saldo</div>
+      <div style="font-size:28px;font-weight:800;" class="{{ 'amount-positive' if summary.balance >= 0 else 'amount-negative' }}">
+        R$ {{ "%.2f"|format(summary.balance)|replace(".", ",") }}
+      </div>
+      <div style="font-size:12px;color:#94a3b8;margin-top:4px;">Este mês</div>
+    </div>
+    {% if user.monthly_income > 0 %}
+    <div class="card stat-card">
+      <div style="font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">📉 Gasto da renda</div>
+      {% set pct = (summary.expense / user.monthly_income * 100)|round(1) %}
+      <div style="font-size:28px;font-weight:800;color:{{ '#ef4444' if pct > user.alert_threshold else '#f59e0b' if pct > 50 else '#10b981' }};">{{ pct }}%</div>
+      <div class="progress-bar" style="margin-top:10px;">
+        <div class="progress-fill" style="width:{{ [pct, 100]|min }}%;background:{{ '#ef4444' if pct > user.alert_threshold else '#f59e0b' if pct > 50 else '#10b981' }};"></div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Charts Row -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px;">
+    <!-- Trend Chart -->
+    <div class="card" style="padding:24px;grid-column:span 2;" id="trendCard">
+      <div style="font-size:15px;font-weight:700;color:white;margin-bottom:20px;">📈 Tendência mensal (6 meses)</div>
+      <canvas id="trendChart" height="100"></canvas>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px;">
+    <!-- Pie Chart -->
+    <div class="card" style="padding:24px;">
+      <div style="font-size:15px;font-weight:700;color:white;margin-bottom:20px;">🥧 Gastos por categoria</div>
+      {% if by_category %}
+      <canvas id="pieChart" height="200"></canvas>
+      {% else %}
+      <div style="text-align:center;color:#94a3b8;padding:40px 0;font-size:14px;">Nenhuma despesa este mês</div>
+      {% endif %}
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="card" style="padding:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div style="font-size:15px;font-weight:700;color:white;">🕐 Recentes</div>
+        <a href="/transactions" style="font-size:13px;color:#818cf8;">Ver todas →</a>
+      </div>
+      {% if recent %}
+        {% for t in recent %}
+        <div class="table-row" style="padding:10px 0;display:flex;align-items:center;gap:12px;">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(99,102,241,0.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">
+            {{ t.category.icon if t.category else ('💰' if t.type == 'income' else '💸') }}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ t.description }}</div>
+            <div style="font-size:11px;color:#94a3b8;">{{ t.date.strftime('%d/%m/%Y') }}</div>
+          </div>
+          <div style="font-size:14px;font-weight:700;flex-shrink:0;" class="{{ 'amount-positive' if t.type == 'income' else 'amount-negative' }}">
+            {{ '+' if t.type == 'income' else '-' }}R${{ "%.2f"|format(t.amount) }}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div style="text-align:center;color:#94a3b8;padding:30px 0;font-size:14px;">Nenhuma transação ainda</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Cards usage -->
+  {% if cards_usage %}
+  <div style="margin-bottom:28px;">
+    <div style="font-size:15px;font-weight:700;color:white;margin-bottom:16px;">💳 Cartões de crédito</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">
+      {% for cu in cards_usage %}
+      {% if cu %}
+      <a href="/cards/{{ cu.card.id }}" style="text-decoration:none;">
+        <div class="card" style="padding:20px;border-left:4px solid {{ cu.card.color }};cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-weight:700;color:white;">{{ cu.card.name }}</div>
+            {% if cu.card.last_four %}<div style="font-size:12px;color:#94a3b8;">•••• {{ cu.card.last_four }}</div>{% endif %}
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <div style="font-size:12px;color:#94a3b8;">Usado</div>
+            <div style="font-size:12px;color:white;font-weight:600;">R$ {{ "%.2f"|format(cu.used) }} / {{ "%.2f"|format(cu.card.limit) }}</div>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:{{ [cu.percent, 100]|min }}%;background:{{ '#ef4444' if cu.percent > 80 else '#f59e0b' if cu.percent > 60 else cu.card.color }};"></div>
+          </div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:6px;">{{ cu.percent }}% utilizado — disponível R$ {{ "%.2f"|format(cu.available) }}</div>
+        </div>
+      </a>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const trendData = {{ trend | tojson }};
+const byCategory = {{ by_category | tojson }};
+
+// Trend Chart
+new Chart(document.getElementById('trendChart'), {
+  type: 'bar',
+  data: {
+    labels: trendData.map(d => d.month),
+    datasets: [
+      {
+        label: 'Receitas',
+        data: trendData.map(d => d.income),
+        backgroundColor: 'rgba(16,185,129,0.7)',
+        borderRadius: 6,
+      },
+      {
+        label: 'Despesas',
+        data: trendData.map(d => d.expense),
+        backgroundColor: 'rgba(239,68,68,0.7)',
+        borderRadius: 6,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#94a3b8', font: { size: 12 } } } },
+    scales: {
+      x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+      y: { ticks: { color: '#94a3b8', callback: v => 'R$' + v }, grid: { color: 'rgba(255,255,255,0.05)' } }
+    }
+  }
+});
+
+// Pie Chart
+if (byCategory.length > 0 && document.getElementById('pieChart')) {
+  new Chart(document.getElementById('pieChart'), {
+    type: 'doughnut',
+    data: {
+      labels: byCategory.map(c => c.icon + ' ' + c.name),
+      datasets: [{
+        data: byCategory.map(c => c.total),
+        backgroundColor: byCategory.map(c => c.color),
+        borderWidth: 2,
+        borderColor: '#1e1e2e',
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 }, padding: 10 } },
+        tooltip: { callbacks: { label: ctx => ' R$ ' + ctx.raw.toFixed(2) } }
+      }
+    }
+  });
+}
+
+// Make trend card full-width on mobile
+function adjustLayout() {
+  const card = document.getElementById('trendCard');
+  if (window.innerWidth < 640) {
+    card.style.gridColumn = 'span 1';
+  } else {
+    card.style.gridColumn = 'span 2';
+  }
+}
+adjustLayout();
+window.addEventListener('resize', adjustLayout);
+</script>
+{% endblock %}

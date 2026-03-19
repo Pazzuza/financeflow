@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}Metas — FinanceFlow{% endblock %}
+
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+    <h1 style="font-size:22px;font-weight:800;color:white;">🎯 Metas financeiras</h1>
+    <button onclick="document.getElementById('newGoalModal').style.display='flex'" class="btn-primary">+ Nova meta</button>
+  </div>
+
+  {% if error %}
+  <div class="alert-box" style="margin-bottom:20px;">
+    ⚠️ {{ error }}
+  </div>
+  {% endif %}
+
+  <!-- Alerts -->
+  {% if alerts %}
+  <div style="margin-bottom:20px;">
+    <div style="font-size:13px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">🔔 Notificações</div>
+    {% for alert in alerts %}
+    <div class="{{ 'success-box' if alert.type == 'goal_reached' else 'alert-box' }}" style="margin-bottom:8px;">
+      <div style="font-weight:600;font-size:14px;">{{ alert.title }}</div>
+      <div style="font-size:13px;color:#94a3b8;margin-top:2px;">{{ alert.message }}</div>
+      <div style="font-size:11px;color:#64748b;margin-top:4px;">{{ alert.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if goals %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;">
+    {% for goal in goals %}
+    <div class="card" style="padding:24px;{% if goal.is_completed %}border-color:rgba(16,185,129,0.3);{% endif %}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:44px;height:44px;border-radius:12px;background:{{ goal.color }}20;border:1px solid {{ goal.color }}40;display:flex;align-items:center;justify-content:center;font-size:22px;">
+            {{ goal.icon }}
+          </div>
+          <div>
+            <div style="font-size:15px;font-weight:700;color:white;">{{ goal.name }}</div>
+            {% if goal.deadline %}
+            <div style="font-size:11px;color:#94a3b8;">até {{ goal.deadline.strftime('%d/%m/%Y') }}</div>
+            {% endif %}
+          </div>
+        </div>
+        {% if goal.is_completed %}
+        <span style="background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.25);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">✓ Concluída</span>
+        {% endif %}
+      </div>
+
+      {% if goal.description %}
+      <div style="font-size:13px;color:#94a3b8;margin-bottom:14px;">{{ goal.description }}</div>
+      {% endif %}
+
+      <div style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-size:12px;color:#94a3b8;">R$ {{ "%.2f"|format(goal.current_amount) }} / {{ "%.2f"|format(goal.target_amount) }}</span>
+          <span style="font-size:13px;font-weight:700;color:{{ goal.color }};">{{ goal.progress_percent }}%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:{{ goal.progress_percent }}%;background:{{ goal.color }};"></div>
+        </div>
+        <div style="font-size:11px;color:#64748b;margin-top:4px;">
+          Faltam R$ {{ "%.2f"|format([goal.target_amount - goal.current_amount, 0]|max) }}
+        </div>
+      </div>
+
+      {% if not goal.is_completed %}
+      <div style="display:flex;gap:8px;">
+        <button onclick="openDeposit({{ goal.id }}, '{{ goal.name }}')" class="btn-primary" style="flex:1;justify-content:center;padding:8px;font-size:13px;">
+          + Depositar
+        </button>
+        <form method="post" action="/goals/{{ goal.id }}/delete" onsubmit="return confirm('Excluir meta?')">
+          <button type="submit" class="btn-danger" style="height:100%;">✕</button>
+        </form>
+      </div>
+      {% else %}
+      <form method="post" action="/goals/{{ goal.id }}/delete" onsubmit="return confirm('Excluir meta?')">
+        <button type="submit" class="btn-danger" style="width:100%;font-size:13px;">Excluir meta</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card" style="padding:60px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:16px;">🎯</div>
+    <div style="font-size:18px;font-weight:700;color:white;margin-bottom:8px;">Nenhuma meta ainda</div>
+    <div style="font-size:14px;color:#94a3b8;margin-bottom:24px;">Defina metas financeiras para acompanhar seu progresso</div>
+    <button onclick="document.getElementById('newGoalModal').style.display='flex'" class="btn-primary">+ Criar primeira meta</button>
+  </div>
+  {% endif %}
+</div>
+
+<!-- New Goal Modal -->
+<div id="newGoalModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center;padding:20px;overflow-y:auto;">
+  <div class="card" style="width:100%;max-width:480px;padding:28px;position:relative;margin:auto;">
+    <button onclick="document.getElementById('newGoalModal').style.display='none'" style="position:absolute;top:16px;right:16px;background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer;">✕</button>
+    <h2 style="font-size:18px;font-weight:700;color:white;margin-bottom:22px;">🎯 Nova meta</h2>
+    <form method="post" action="/goals/new">
+      <div style="margin-bottom:16px;">
+        <label>Nome da meta</label>
+        <input type="text" name="name" placeholder="Ex: Viagem para Europa, Reserva de emergência..." required/>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label>Descrição (opcional)</label>
+        <textarea name="description" placeholder="Descreva sua meta..." rows="2" style="resize:vertical;"></textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div>
+          <label>Valor alvo (R$)</label>
+          <input type="number" name="target_amount" placeholder="10000.00" step="0.01" min="1" required/>
+        </div>
+        <div>
+          <label>Já tenho (R$)</label>
+          <input type="number" name="current_amount" placeholder="0.00" step="0.01" min="0" value="0"/>
+        </div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label>Prazo (opcional)</label>
+        <input type="date" name="deadline"/>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px;">
+        <div>
+          <label>Ícone (emoji)</label>
+          <input type="text" name="icon" placeholder="🎯" maxlength="2" value="🎯"/>
+        </div>
+        <div>
+          <label>Cor</label>
+          <input type="color" name="color" value="#10b981" style="height:44px;padding:4px 8px!important;cursor:pointer;"/>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary" style="width:100%;justify-content:center;padding:13px;">Criar meta</button>
+    </form>
+  </div>
+</div>
+
+<!-- Deposit Modal -->
+<div id="depositModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center;padding:20px;">
+  <div class="card" style="width:100%;max-width:380px;padding:28px;position:relative;">
+    <button onclick="document.getElementById('depositModal').style.display='none'" style="position:absolute;top:16px;right:16px;background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer;">✕</button>
+    <h2 style="font-size:18px;font-weight:700;color:white;margin-bottom:6px;">💰 Depositar</h2>
+    <p id="depositGoalName" style="font-size:14px;color:#94a3b8;margin-bottom:20px;"></p>
+    <form method="post" id="depositForm">
+      <div style="margin-bottom:20px;">
+        <label>Valor (R$)</label>
+        <input type="number" name="amount" placeholder="500.00" step="0.01" min="0.01" required/>
+      </div>
+      <button type="submit" class="btn-primary" style="width:100%;justify-content:center;padding:13px;">Confirmar depósito</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openDeposit(goalId, goalName) {
+  document.getElementById('depositGoalName').textContent = 'Meta: ' + goalName;
+  document.getElementById('depositForm').action = '/goals/' + goalId + '/deposit';
+  document.getElementById('depositModal').style.display = 'flex';
+}
+</script>
+{% endblock %}

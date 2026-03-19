@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Novo Cartão — FinanceFlow{% endblock %}
+
+{% block content %}
+<div style="max-width:520px;margin:0 auto;">
+  <div style="margin-bottom:24px;">
+    <a href="/cards" style="color:#94a3b8;font-size:14px;text-decoration:none;">← Voltar</a>
+    <h1 style="font-size:22px;font-weight:800;color:white;margin-top:8px;">Novo Cartão</h1>
+  </div>
+
+  {% if error %}
+  <div class="alert-box" style="margin-bottom:20px;">⚠️ {{ error }}</div>
+  {% endif %}
+
+  <!-- Card preview -->
+  <div id="cardPreview" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:16px;padding:24px;margin-bottom:24px;position:relative;min-height:150px;">
+    <div style="position:absolute;top:16px;right:16px;opacity:0.2;font-size:70px;line-height:1;">💳</div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.6);font-weight:600;letter-spacing:0.08em;margin-bottom:16px;">CARTÃO DE CRÉDITO</div>
+    <div id="previewName" style="font-size:20px;font-weight:800;color:white;margin-bottom:8px;">Meu Cartão</div>
+    <div id="previewLast" style="font-size:15px;color:rgba(255,255,255,0.7);letter-spacing:0.15em;">•••• •••• •••• ????</div>
+    <div style="position:absolute;bottom:16px;right:20px;text-align:right;">
+      <div id="previewDates" style="font-size:11px;color:rgba(255,255,255,0.5);">Fecha dia ? | Vence dia ?</div>
+    </div>
+    <div style="position:absolute;bottom:16px;left:24px;">
+      <div id="previewLimit" style="font-size:13px;color:rgba(255,255,255,0.7);">Limite: R$ 0,00</div>
+    </div>
+  </div>
+
+  <div class="card" style="padding:28px;">
+    <form method="post" action="/cards/new">
+      <div style="margin-bottom:18px;">
+        <label>Nome do cartão</label>
+        <input type="text" name="name" placeholder="Nubank, Itaú Platinum..." required oninput="document.getElementById('previewName').textContent=this.value||'Meu Cartão'"/>
+      </div>
+      <div style="margin-bottom:18px;">
+        <label>Limite (R$)</label>
+        <input type="number" name="limit" placeholder="5000.00" step="0.01" min="0" required oninput="document.getElementById('previewLimit').textContent='Limite: R$ '+(parseFloat(this.value)||0).toFixed(2)"/>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;">
+        <div>
+          <label>Dia de fechamento</label>
+          <input type="number" name="closing_day" placeholder="15" min="1" max="31" required oninput="updateDates()"/>
+        </div>
+        <div>
+          <label>Dia de vencimento</label>
+          <input type="number" name="due_day" placeholder="22" min="1" max="31" required oninput="updateDates()"/>
+        </div>
+      </div>
+      <div style="margin-bottom:18px;">
+        <label>Últimos 4 dígitos (opcional)</label>
+        <input type="text" name="last_four" placeholder="1234" maxlength="4" oninput="document.getElementById('previewLast').textContent='•••• •••• •••• '+(this.value||'????')"/>
+      </div>
+      <div style="margin-bottom:24px;">
+        <label>Cor do cartão</label>
+        <input type="color" name="color" value="#6366f1" style="height:44px;padding:4px 8px!important;cursor:pointer;" oninput="document.getElementById('cardPreview').style.background='linear-gradient(135deg,'+this.value+','+this.value+'88)'"/>
+      </div>
+      <button type="submit" class="btn-primary" style="width:100%;justify-content:center;padding:14px;">💳 Salvar cartão</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updateDates() {
+  const c = document.querySelector('input[name="closing_day"]').value;
+  const d = document.querySelector('input[name="due_day"]').value;
+  document.getElementById('previewDates').textContent = `Fecha dia ${c||'?'} | Vence dia ${d||'?'}`;
+}
+</script>
+{% endblock %}

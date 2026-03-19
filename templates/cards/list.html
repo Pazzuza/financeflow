@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Cartões — FinanceFlow{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+    <h1 style="font-size:22px;font-weight:800;color:white;">💳 Cartões de crédito</h1>
+    <a href="/cards/new" class="btn-primary">+ Novo cartão</a>
+  </div>
+
+  {% if cards_usage %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;">
+    {% for cu in cards_usage %}
+    {% if cu and cu.card %}
+    <div class="card" style="padding:0;overflow:hidden;">
+      <!-- Card visual -->
+      <div style="background:linear-gradient(135deg, {{ cu.card.color }}, {{ cu.card.color }}88);padding:24px;position:relative;min-height:140px;">
+        <div style="position:absolute;top:16px;right:16px;opacity:0.3;font-size:60px;line-height:1;">💳</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:600;letter-spacing:0.05em;margin-bottom:12px;">CARTÃO DE CRÉDITO</div>
+        <div style="font-size:18px;font-weight:800;color:white;margin-bottom:4px;">{{ cu.card.name }}</div>
+        {% if cu.card.last_four %}
+        <div style="font-size:14px;color:rgba(255,255,255,0.7);letter-spacing:0.15em;">•••• •••• •••• {{ cu.card.last_four }}</div>
+        {% endif %}
+        <div style="position:absolute;bottom:16px;right:20px;text-align:right;">
+          <div style="font-size:11px;color:rgba(255,255,255,0.6);">Fecha dia {{ cu.card.closing_day }} | Vence dia {{ cu.card.due_day }}</div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div style="padding:20px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+          <div>
+            <div style="font-size:11px;color:#94a3b8;margin-bottom:3px;">Limite</div>
+            <div style="font-size:14px;font-weight:700;color:white;">R$ {{ "%.2f"|format(cu.card.limit) }}</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:#94a3b8;margin-bottom:3px;">Usado</div>
+            <div style="font-size:14px;font-weight:700;color:#ef4444;">R$ {{ "%.2f"|format(cu.used) }}</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:#94a3b8;margin-bottom:3px;">Disponível</div>
+            <div style="font-size:14px;font-weight:700;color:#10b981;">R$ {{ "%.2f"|format(cu.available) }}</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:12px;color:#94a3b8;">Utilização</span>
+            <span style="font-size:12px;font-weight:600;color:{{ '#ef4444' if cu.percent > 80 else '#f59e0b' if cu.percent > 60 else '#10b981' }};">{{ cu.percent }}%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:{{ [cu.percent, 100]|min }}%;background:{{ '#ef4444' if cu.percent > 80 else '#f59e0b' if cu.percent > 60 else cu.card.color }};"></div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:16px;">
+          <a href="/cards/{{ cu.card.id }}" class="btn-ghost" style="flex:1;text-align:center;font-size:13px;text-decoration:none;">Ver fatura</a>
+          <form method="post" action="/cards/{{ cu.card.id }}/delete" onsubmit="return confirm('Arquivar cartão?')" style="flex:1;">
+            <button type="submit" class="btn-danger" style="width:100%;font-size:13px;">Arquivar</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="card" style="padding:60px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:16px;">💳</div>
+    <div style="font-size:18px;font-weight:700;color:white;margin-bottom:8px;">Nenhum cartão cadastrado</div>
+    <div style="font-size:14px;color:#94a3b8;margin-bottom:24px;">Adicione seus cartões de crédito para controlar faturas e limites</div>
+    <a href="/cards/new" class="btn-primary">+ Adicionar cartão</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

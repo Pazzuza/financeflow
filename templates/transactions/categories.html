@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Categorias — FinanceFlow{% endblock %}
+
+{% block content %}
+<div style="max-width:800px;margin:0 auto;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+    <h1 style="font-size:22px;font-weight:800;color:white;">🏷️ Categorias</h1>
+    <button onclick="document.getElementById('newModal').style.display='flex'" class="btn-primary">+ Nova categoria</button>
+  </div>
+
+  {% if error %}
+  <div class="alert-box" style="margin-bottom:20px;">
+    ⚠️ {{ error }}
+  </div>
+  {% endif %}
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <!-- Income -->
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px;">💰 Receitas</div>
+      <div class="card" style="overflow:hidden;">
+        {% for cat in categories if cat.type == 'income' %}
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;" id="colorSwatch{{ cat.id }}"  style="background:{{ cat.color }}20;">
+            {{ cat.icon }}
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:600;color:white;">{{ cat.name }}</div>
+            {% if cat.subcategories %}
+            <div style="font-size:11px;color:#94a3b8;">{{ cat.subcategories|length }} subcategorias</div>
+            {% endif %}
+          </div>
+          {% if not cat.is_default %}
+          <form method="post" action="/categories/{{ cat.id }}/delete" onsubmit="return confirm('Excluir?')">
+            <button type="submit" class="btn-danger" style="font-size:12px;padding:4px 10px;">✕</button>
+          </form>
+          {% endif %}
+        </div>
+        {% else %}
+        <div style="padding:30px;text-align:center;color:#94a3b8;font-size:14px;">Nenhuma categoria de receita</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Expense -->
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#ef4444;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px;">💸 Despesas</div>
+      <div class="card" style="overflow:hidden;">
+        {% for cat in categories if cat.type == 'expense' %}
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">
+            {{ cat.icon }}
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:600;color:white;">{{ cat.name }}</div>
+            {% if cat.subcategories %}
+            <div style="font-size:11px;color:#94a3b8;">{{ cat.subcategories|length }} subcategorias</div>
+            {% endif %}
+          </div>
+          {% if not cat.is_default %}
+          <form method="post" action="/categories/{{ cat.id }}/delete" onsubmit="return confirm('Excluir?')">
+            <button type="submit" class="btn-danger" style="font-size:12px;padding:4px 10px;">✕</button>
+          </form>
+          {% endif %}
+        </div>
+        {% else %}
+        <div style="padding:30px;text-align:center;color:#94a3b8;font-size:14px;">Nenhuma categoria de despesa</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New category modal -->
+<div id="newModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center;padding:20px;">
+  <div class="card" style="width:100%;max-width:440px;padding:28px;position:relative;">
+    <button onclick="document.getElementById('newModal').style.display='none'" style="position:absolute;top:16px;right:16px;background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;">✕</button>
+    <h2 style="font-size:18px;font-weight:700;color:white;margin-bottom:20px;">Nova categoria</h2>
+    <form method="post" action="/categories/new">
+      <div style="margin-bottom:16px;">
+        <label>Nome</label>
+        <input type="text" name="name" placeholder="Nome da categoria" required/>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div>
+          <label>Tipo</label>
+          <select name="type" required>
+            <option value="expense">💸 Despesa</option>
+            <option value="income">💰 Receita</option>
+          </select>
+        </div>
+        <div>
+          <label>Ícone (emoji)</label>
+          <input type="text" name="icon" placeholder="🏠" maxlength="2"/>
+        </div>
+      </div>
+      <div style="margin-bottom:20px;">
+        <label>Cor</label>
+        <input type="color" name="color" value="#6366f1" style="height:44px;padding:4px 8px!important;cursor:pointer;"/>
+      </div>
+      <button type="submit" class="btn-primary" style="width:100%;justify-content:center;">Salvar categoria</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

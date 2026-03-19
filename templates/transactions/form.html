@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Nova Transação — FinanceFlow{% endblock %}
+
+{% block content %}
+<div style="max-width:600px;margin:0 auto;">
+  <div style="margin-bottom:24px;">
+    <a href="/transactions" style="color:#94a3b8;font-size:14px;text-decoration:none;">← Voltar</a>
+    <h1 style="font-size:22px;font-weight:800;color:white;margin-top:8px;">Nova Transação</h1>
+  </div>
+
+  {% if error %}
+  <div class="alert-box">⚠️ {{ error }}</div>
+  {% endif %}
+
+  <div class="card" style="padding:28px;">
+    <form method="post" action="/transactions/new">
+
+      <!-- Type toggle -->
+      <div style="margin-bottom:24px;">
+        <label>Tipo</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <label style="text-transform:none;cursor:pointer;" id="label-expense">
+            <input type="radio" name="type" value="expense" checked style="display:none;" id="radio-expense" onchange="updateType()"/>
+            <div id="btn-expense" style="padding:14px;border-radius:12px;text-align:center;background:rgba(239,68,68,0.15);border:2px solid #ef4444;color:#f87171;font-weight:700;font-size:15px;transition:all 0.2s;">
+              💸 Despesa
+            </div>
+          </label>
+          <label style="text-transform:none;cursor:pointer;" id="label-income">
+            <input type="radio" name="type" value="income" style="display:none;" id="radio-income" onchange="updateType()"/>
+            <div id="btn-income" style="padding:14px;border-radius:12px;text-align:center;background:rgba(255,255,255,0.04);border:2px solid rgba(255,255,255,0.1);color:#94a3b8;font-weight:700;font-size:15px;transition:all 0.2s;">
+              💰 Receita
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div style="margin-bottom:18px;">
+        <label>Descrição</label>
+        <input type="text" name="description" placeholder="Ex: Supermercado, Salário..." required/>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;">
+        <div>
+          <label>Valor da parcela (R$)</label>
+          <input type="number" name="amount" placeholder="0,00" step="0.01" min="0.01" required/>
+          <div style="font-size:12px;color:#94a3b8;margin-top:6px;">
+            Se preencher <b>Parcelas</b>, este valor será por parcela.
+          </div>
+        </div>
+        <div>
+          <label>Data</label>
+          <input type="date" name="date" value="{{ today.strftime('%Y-%m-%d') if today else '' }}" required/>
+        </div>
+      </div>
+
+      <div style="margin-bottom:18px;">
+        <label>Categoria</label>
+        <select name="category_id" id="category_select">
+          <option value="">Sem categoria</option>
+          {% for cat in categories %}
+          <option value="{{ cat.id }}" data-type="{{ cat.type }}">{{ cat.icon }} {{ cat.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {% if cards %}
+      <div style="margin-bottom:18px;">
+        <label>Cartão de crédito (opcional)</label>
+        <select name="credit_card_id">
+          <option value="">Sem cartão (dinheiro/débito)</option>
+          {% for card in cards %}
+          <option value="{{ card.id }}">💳 {{ card.name }}{% if card.last_four %} •••• {{ card.last_four }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;">
+        <div>
+          <label>Parcelas (opcional)</label>
+          <input type="number" name="installment_total" placeholder="1 = à vista" min="1" max="60"/>
+        </div>
+        <div style="display:flex;align-items:flex-end;padding-bottom:2px;">
+          <label style="display:flex;align-items:center;gap:8px;text-transform:none;cursor:pointer;font-size:14px;font-weight:500;color:#e2e8f0;">
+            <input type="checkbox" name="is_recurring" style="width:18px;height:18px;border-radius:4px;padding:0 !important;"/>
+            Recorrente
+          </label>
+        </div>
+      </div>
+
+      <div style="margin-bottom:24px;">
+        <label>Notas (opcional)</label>
+        <textarea name="notes" placeholder="Observações..." rows="2" style="resize:vertical;"></textarea>
+      </div>
+
+      <button type="submit" class="btn-primary" style="width:100%;justify-content:center;padding:14px;">
+        💾 Salvar transação
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const today = new Date().toISOString().split('T')[0];
+document.querySelector('input[name="date"]').value = today;
+
+function updateType() {
+  const isExpense = document.getElementById('radio-expense').checked;
+  document.getElementById('btn-expense').style.cssText = isExpense
+    ? 'padding:14px;border-radius:12px;text-align:center;background:rgba(239,68,68,0.15);border:2px solid #ef4444;color:#f87171;font-weight:700;font-size:15px;transition:all 0.2s;'
+    : 'padding:14px;border-radius:12px;text-align:center;background:rgba(255,255,255,0.04);border:2px solid rgba(255,255,255,0.1);color:#94a3b8;font-weight:700;font-size:15px;transition:all 0.2s;';
+  document.getElementById('btn-income').style.cssText = !isExpense
+    ? 'padding:14px;border-radius:12px;text-align:center;background:rgba(16,185,129,0.15);border:2px solid #10b981;color:#34d399;font-weight:700;font-size:15px;transition:all 0.2s;'
+    : 'padding:14px;border-radius:12px;text-align:center;background:rgba(255,255,255,0.04);border:2px solid rgba(255,255,255,0.1);color:#94a3b8;font-weight:700;font-size:15px;transition:all 0.2s;';
+
+  // Filter categories by type
+  const type = isExpense ? 'expense' : 'income';
+  const sel = document.getElementById('category_select');
+  for (let opt of sel.options) {
+    if (!opt.value) continue;
+    opt.style.display = opt.dataset.type === type ? '' : 'none';
+  }
+  sel.value = '';
+}
+updateType();
+</script>
+{% endblock %}

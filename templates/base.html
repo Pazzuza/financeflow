@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}FinanceFlow{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    * { font-family: 'Plus Jakarta Sans', sans-serif; }
+    :root {
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --surface: #1e1e2e;
+      --surface2: #2a2a3e;
+      --surface3: #313148;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --border: rgba(255,255,255,0.08);
+    }
+    body { background: #13131f; color: var(--text); }
+    .glass {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(99,102,241,0.4); }
+    .btn-danger {
+      background: rgba(239,68,68,0.15);
+      color: #ef4444;
+      border: 1px solid rgba(239,68,68,0.3);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-danger:hover { background: rgba(239,68,68,0.25); }
+    .btn-ghost {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.1); }
+    input, select, textarea {
+      background: var(--surface2) !important;
+      border: 1px solid var(--border) !important;
+      color: var(--text) !important;
+      border-radius: 10px !important;
+      padding: 10px 14px !important;
+      width: 100%;
+      font-size: 14px;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary) !important;
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.15) !important;
+    }
+    select option { background: #2a2a3e; }
+    label { font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; display: block; letter-spacing: 0.02em; text-transform: uppercase; }
+    .badge-income { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.25); padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge-expense { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.25); padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .nav-link { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; color: var(--text-muted); font-size: 14px; font-weight: 500; text-decoration: none; transition: all 0.2s; }
+    .nav-link:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+    .nav-link.active { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.2); }
+    .sidebar { width: 240px; min-height: 100vh; background: var(--surface); border-right: 1px solid var(--border); position: fixed; top: 0; left: 0; z-index: 40; display: flex; flex-direction: column; transition: transform 0.3s; }
+    .main-content { margin-left: 240px; min-height: 100vh; padding: 24px; }
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .main-content { margin-left: 0; padding: 16px; }
+    }
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 30; }
+    .overlay.show { display: block; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    .progress-bar { height: 6px; border-radius: 10px; background: rgba(255,255,255,0.08); overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 10px; transition: width 0.8s ease; }
+    .stat-card { padding: 20px; border-radius: 16px; }
+    .amount-positive { color: #10b981; font-weight: 700; }
+    .amount-negative { color: #ef4444; font-weight: 700; }
+    .amount-neutral { color: #818cf8; font-weight: 700; }
+    .table-row { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+    .table-row:hover { background: rgba(255,255,255,0.03); }
+    .alert-box { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+    .success-box { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+    .animate-in { animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .top-bar { display: none; background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 16px; position: sticky; top: 0; z-index: 20; align-items: center; justify-content: space-between; }
+    @media (max-width: 768px) { .top-bar { display: flex; } }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full">
+
+<!-- Mobile overlay -->
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<!-- Top bar (mobile) -->
+<div class="top-bar">
+  <button onclick="openSidebar()" style="background:none;border:none;color:var(--text);cursor:pointer;">
+    <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+  </button>
+  <span style="font-weight:700;font-size:16px;color:white;">💎 FinanceFlow</span>
+  <a href="/auth/logout" style="color:var(--text-muted);font-size:13px;">Sair</a>
+</div>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div style="padding: 24px 16px 16px;">
+    <div style="font-size:20px;font-weight:800;color:white;margin-bottom:4px;">💎 FinanceFlow</div>
+    <div style="font-size:12px;color:var(--text-muted);">Gestão financeira pessoal</div>
+  </div>
+
+  {% if user %}
+  <div style="padding:12px 16px;margin:0 12px 8px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);border-radius:12px;">
+    <div style="font-size:13px;font-weight:600;color:white;">{{ user.name }}</div>
+    <div style="font-size:11px;color:var(--text-muted);">{{ user.email }}</div>
+  </div>
+  {% endif %}
+
+  <nav style="padding: 8px 12px; flex: 1;">
+    <div style="font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:0.1em;padding:8px 4px 6px;text-transform:uppercase;">Principal</div>
+    <a href="/dashboard" class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}">
+      <span>📊</span> Dashboard
+    </a>
+    <a href="/transactions" class="nav-link {% if '/transactions' in request.url.path %}active{% endif %}">
+      <span>💸</span> Transações
+    </a>
+    <a href="/reports" class="nav-link {% if '/reports' in request.url.path %}active{% endif %}">
+      <span>📈</span> Relatórios
+    </a>
+
+    <div style="font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:0.1em;padding:16px 4px 6px;text-transform:uppercase;">Gestão</div>
+    <a href="/cards" class="nav-link {% if '/cards' in request.url.path %}active{% endif %}">
+      <span>💳</span> Cartões
+    </a>
+    <a href="/goals" class="nav-link {% if '/goals' in request.url.path %}active{% endif %}">
+      <span>🎯</span> Metas
+    </a>
+    <a href="/categories" class="nav-link {% if '/categories' in request.url.path %}active{% endif %}">
+      <span>🏷️</span> Categorias
+    </a>
+
+    <div style="font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:0.1em;padding:16px 4px 6px;text-transform:uppercase;">Conta</div>
+    <a href="/settings" class="nav-link {% if '/settings' in request.url.path %}active{% endif %}">
+      <span>⚙️</span> Configurações
+    </a>
+    <a href="/auth/logout" class="nav-link">
+      <span>🚪</span> Sair
+    </a>
+  </nav>
+
+  <div style="padding:12px 16px;margin:8px 12px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.15);border-radius:12px;">
+    <div style="font-size:11px;color:var(--text-muted);">Renda mensal</div>
+    <div style="font-size:16px;font-weight:700;color:#10b981;">{{ user.currency if user else 'R$' }} {{ "%.2f"|format(user.monthly_income) if user else '0,00' }}</div>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main-content">
+  <div class="animate-in">
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
+<script>
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('overlay').classList.add('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

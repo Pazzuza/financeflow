@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Transações — FinanceFlow{% endblock %}
+
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+    <h1 style="font-size:22px;font-weight:800;color:white;">💸 Transações</h1>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <a href="/transactions/export{% if start or end %}?start={{ start or '' }}&end={{ end or '' }}{% endif %}" class="btn-ghost" style="font-size:13px;">
+        ⬇️ Exportar CSV
+      </a>
+      <a href="/transactions/new" class="btn-primary">+ Nova</a>
+    </div>
+  </div>
+
+  {% if error %}
+  <div class="alert-box" style="margin-bottom:20px;">
+    ⚠️ {{ error }}
+  </div>
+  {% endif %}
+
+  <!-- Summary (filtered) -->
+  {% if summary %}
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
+    <div class="card" style="padding:16px;">
+      <div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;">Receitas</div>
+      <div class="amount-positive" style="font-size:20px;font-weight:800;">R$ {{ "%.2f"|format(summary.income) }}</div>
+    </div>
+    <div class="card" style="padding:16px;">
+      <div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;">Despesas</div>
+      <div class="amount-negative" style="font-size:20px;font-weight:800;">R$ {{ "%.2f"|format(summary.expense) }}</div>
+    </div>
+    <div class="card" style="padding:16px;">
+      <div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;">Saldo</div>
+      <div class="{{ 'amount-positive' if summary.balance >= 0 else 'amount-negative' }}" style="font-size:20px;font-weight:800;">R$ {{ "%.2f"|format(summary.balance) }}</div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Filters -->
+  <div class="card" style="padding:20px;margin-bottom:20px;">
+    <form method="get" action="/transactions" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:end;">
+      <div>
+        <label>Data início</label>
+        <input type="date" name="start" value="{{ start or '' }}"/>
+      </div>
+      <div>
+        <label>Data fim</label>
+        <input type="date" name="end" value="{{ end or '' }}"/>
+      </div>
+      <div>
+        <label>Tipo</label>
+        <select name="type_filter">
+          <option value="">Todos</option>
+          <option value="income" {% if type_filter == 'income' %}selected{% endif %}>Receitas</option>
+          <option value="expense" {% if type_filter == 'expense' %}selected{% endif %}>Despesas</option>
+        </select>
+      </div>
+      <div>
+        <label>Categoria</label>
+        <select name="category_id">
+          <option value="">Todas</option>
+          {% for cat in categories %}
+          <option value="{{ cat.id }}" {% if category_id == cat.id %}selected{% endif %}>{{ cat.icon }} {{ cat.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button type="submit" class="btn-primary" style="flex:1;">Filtrar</button>
+        <a href="/transactions" class="btn-ghost">✕</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- List -->
+  <div class="card" style="overflow:hidden;">
+    {% if transactions %}
+    <!-- Desktop table -->
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:rgba(255,255,255,0.03);">
+            <th style="padding:14px 16px;text-align:left;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Data</th>
+            <th style="padding:14px 16px;text-align:left;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Descrição</th>
+            <th style="padding:14px 16px;text-align:left;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Categoria</th>
+            <th style="padding:14px 16px;text-align:left;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Tipo</th>
+            <th style="padding:14px 16px;text-align:right;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Valor</th>
+            <th style="padding:14px 16px;text-align:right;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in transactions %}
+          <tr class="table-row">
+            <td style="padding:14px 16px;font-size:13px;color:#94a3b8;white-space:nowrap;">{{ t.date.strftime('%d/%m/%Y') }}</td>
+            <td style="padding:14px 16px;">
+              <div style="font-size:14px;font-weight:600;color:white;">{{ t.description }}</div>
+              {% if t.installment_total %}<div style="font-size:11px;color:#94a3b8;">Parcela {{ t.installment_current }}/{{ t.installment_total }}</div>{% endif %}
+              {% if t.credit_card %}<div style="font-size:11px;color:#818cf8;">💳 {{ t.credit_card.name }}</div>{% endif %}
+            </td>
+            <td style="padding:14px 16px;font-size:13px;color:#94a3b8;">
+              {% if t.category %}{{ t.category.icon }} {{ t.category.name }}{% else %}—{% endif %}
+            </td>
+            <td style="padding:14px 16px;">
+              <span class="{{ 'badge-income' if t.type == 'income' else 'badge-expense' }}">
+                {{ 'Receita' if t.type == 'income' else 'Despesa' }}
+              </span>
+            </td>
+            <td style="padding:14px 16px;text-align:right;font-size:15px;font-weight:700;" class="{{ 'amount-positive' if t.type == 'income' else 'amount-negative' }}">
+              {{ '+' if t.type == 'income' else '-' }}R${{ "%.2f"|format(t.amount) }}
+            </td>
+            <td style="padding:14px 16px;text-align:right;">
+              <div style="display:flex;gap:10px;justify-content:flex-end;align-items:center;flex-wrap:wrap;">
+                {% if not t.installment_total or t.installment_total <= 1 %}
+                <a href="/transactions/{{ t.id }}/edit" class="btn-ghost" style="padding:6px 12px;font-size:13px;text-decoration:none;">
+                  ✏️ Editar
+                </a>
+                {% endif %}
+                <form method="post" action="/transactions/{{ t.id }}/delete" onsubmit="return confirm('Excluir esta transação?')" style="margin:0;">
+                  <button type="submit" class="btn-danger" style="padding:6px 12px;font-size:13px;">Excluir</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div style="padding:16px;display:flex;justify-content:center;gap:8px;">
+      {% if page > 1 %}
+      <a href="?page={{ page-1 }}{% if start %}&start={{ start }}{% endif %}{% if end %}&end={{ end }}{% endif %}{% if type_filter %}&type_filter={{ type_filter }}{% endif %}" class="btn-ghost" style="padding:6px 14px;font-size:13px;">← Anterior</a>
+      {% endif %}
+      <span style="padding:6px 14px;font-size:13px;color:#94a3b8;">{{ page }}/{{ total_pages }}</span>
+      {% if page < total_pages %}
+      <a href="?page={{ page+1 }}{% if start %}&start={{ start }}{% endif %}{% if end %}&end={{ end }}{% endif %}{% if type_filter %}&type_filter={{ type_filter }}{% endif %}" class="btn-ghost" style="padding:6px 14px;font-size:13px;">Próxima →</a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div style="text-align:center;padding:60px 20px;color:#94a3b8;">
+      <div style="font-size:40px;margin-bottom:12px;">💸</div>
+      <div style="font-size:16px;font-weight:600;color:white;margin-bottom:6px;">Nenhuma transação encontrada</div>
+      <div style="font-size:14px;margin-bottom:20px;">Comece adicionando sua primeira transação</div>
+      <a href="/transactions/new" class="btn-primary">+ Adicionar transação</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
