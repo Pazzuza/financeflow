@@ -22,3 +22,5 @@ class User(Base):
     credit_cards = relationship("CreditCard", back_populates="user", cascade="all, delete-orphan")
     goals = relationship("FinancialGoal", back_populates="user", cascade="all, delete-orphan")
     alerts = relationship("Alert", back_populates="user", cascade="all, delete-orphan")
+    accounts = relationship("Account", back_populates="user", cascade="all, delete-orphan")
+    transfers = relationship("Transfer", back_populates="user", cascade="all, delete-orphan")

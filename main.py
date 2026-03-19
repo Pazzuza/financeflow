@@ -45,6 +45,7 @@ from app.routes.cards import router as card_router
 from app.routes.goals import router as goal_router
 from app.routes.reports import router as report_router
 from app.routes.settings import router as settings_router
+from app.routes.accounts import router as accounts_router
 
 app.include_router(auth_router)
 app.include_router(dashboard_router)
@@ -54,3 +55,4 @@ app.include_router(card_router)
 app.include_router(goal_router)
 app.include_router(report_router)
 app.include_router(settings_router)
+app.include_router(accounts_router)

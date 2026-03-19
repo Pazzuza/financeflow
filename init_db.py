@@ -13,10 +13,10 @@ import app.models  # noqa - registers all models
 
 
 def init_db():
-    print("🚀 Criando tabelas do banco de dados...")
+    print("Criando tabelas do banco de dados...")
     Base.metadata.create_all(bind=engine)
-    print("✅ Banco de dados inicializado com sucesso!")
-    print("   Arquivo: financeflow.db")
+    print("Banco de dados inicializado com sucesso!")
+    print("Arquivo: financeflow.db")
 
 
 def seed_demo():
@@ -35,16 +35,21 @@ def seed_demo():
         from app.models.user import User
         existing = db.query(User).filter(User.email == "demo@financeflow.com").first()
         if existing:
-            print("⚠️  Usuário demo já existe.")
+            print("Aviso: Usuário demo já existe.")
             return
 
-        print("🌱 Inserindo dados de demonstração...")
+        print("Inserindo dados de demonstracao...")
         user = create_user(db, UserCreate(
             name="Demo User",
             email="demo@financeflow.com",
             password="demo1234",
             monthly_income=8000.0,
         ))
+
+        from app.models.account import Account
+        default_account = db.query(Account).filter(Account.user_id == user.id).order_by(Account.id.desc()).first()
+        if not default_account:
+            raise RuntimeError("Default account not created for demo user")
 
         # Credit card
         card = create_card(db, CreditCardCreate(
@@ -89,6 +94,7 @@ def seed_demo():
                 date=today - relativedelta(days=day_offset),
                 category_id=cat_id,
                 credit_card_id=card_id,
+                account_id=default_account.id,
             ), user.id)
 
         # Last month
@@ -106,6 +112,7 @@ def seed_demo():
                 type=ttype,
                 date=datetime(last_month.year, last_month.month, 5),
                 category_id=cats.get(cat_name),
+                account_id=default_account.id,
             ), user.id)
 
         # Goals
@@ -136,9 +143,9 @@ def seed_demo():
             color="#10b981",
         ), user.id)
 
-        print("✅ Dados de demo inseridos!")
-        print("   Login: demo@financeflow.com")
-        print("   Senha: demo1234")
+        print("Dados de demo inseridos!")
+        print("Login: demo@financeflow.com")
+        print("Senha: demo1234")
     finally:
         db.close()
 
@@ -148,4 +155,4 @@ if __name__ == "__main__":
     if "--seed" in sys.argv or "-s" in sys.argv:
         seed_demo()
     else:
-        print("\n💡 Para inserir dados de demonstração: python init_db.py --seed")
+        print("\nPara inserir dados de demonstracao: python init_db.py --seed")

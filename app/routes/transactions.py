@@ -22,6 +22,7 @@ from app.services.transaction_service import (
 )
 from app.services.export_service import export_transactions_csv
 from app.services.card_service import get_cards
+from app.services.account_service import get_accounts
 from app.models.category import Category
 from app.schemas import TransactionCreate, TransactionUpdate
 
@@ -108,11 +109,13 @@ def new_transaction_page(request: Request, db: Session = Depends(get_db)):
         return redir
     categories = db.query(Category).filter(Category.user_id == user.id).all()
     cards = get_cards(db, user.id)
+    accounts = get_accounts(db, user.id)
     return templates.TemplateResponse("transactions/form.html", {
         "request": request,
         "user": user,
         "categories": categories,
         "cards": cards,
+        "accounts": accounts,
         "error": None,
     })
 
@@ -128,6 +131,7 @@ def create_transaction_post(
     notes: str = Form(""),
     category_id: Optional[str] = Form(None),
     credit_card_id: Optional[str] = Form(None),
+    account_id: int = Form(...),
     installment_total: Optional[str] = Form(None),
     is_recurring: bool = Form(False),
 ):
@@ -152,6 +156,7 @@ def create_transaction_post(
             notes=notes or None,
             category_id=parse_optional_int(category_id),
             credit_card_id=parse_optional_int(credit_card_id),
+            account_id=account_id,
             installment_total=parse_optional_int(installment_total),
             is_recurring=is_recurring,
         )
@@ -160,26 +165,29 @@ def create_transaction_post(
     except ValidationError as e:
         categories = db.query(Category).filter(Category.user_id == user.id).all()
         cards = get_cards(db, user.id)
+        accounts = get_accounts(db, user.id)
         msg = e.errors()[0].get("msg") if e.errors() else "Dados inválidos."
         return templates.TemplateResponse(
             "transactions/form.html",
-            {"request": request, "user": user, "categories": categories, "cards": cards, "error": msg},
+            {"request": request, "user": user, "categories": categories, "cards": cards, "accounts": accounts, "error": msg},
             status_code=400,
         )
     except ValueError as e:
         categories = db.query(Category).filter(Category.user_id == user.id).all()
         cards = get_cards(db, user.id)
+        accounts = get_accounts(db, user.id)
         return templates.TemplateResponse(
             "transactions/form.html",
-            {"request": request, "user": user, "categories": categories, "cards": cards, "error": str(e)},
+            {"request": request, "user": user, "categories": categories, "cards": cards, "accounts": accounts, "error": str(e)},
             status_code=400,
         )
     except Exception:
         categories = db.query(Category).filter(Category.user_id == user.id).all()
         cards = get_cards(db, user.id)
+        accounts = get_accounts(db, user.id)
         return templates.TemplateResponse(
             "transactions/form.html",
-            {"request": request, "user": user, "categories": categories, "cards": cards, "error": "Falha ao salvar a transação."},
+            {"request": request, "user": user, "categories": categories, "cards": cards, "accounts": accounts, "error": "Falha ao salvar a transação."},
             status_code=500,
         )
 
@@ -196,13 +204,14 @@ def edit_transaction_page(transaction_id: int, request: Request, db: Session = D
 
     categories = db.query(Category).filter(Category.user_id == user.id).all()
     cards = get_cards(db, user.id)
+    accounts = get_accounts(db, user.id)
     error: Optional[str] = None
     if txn.installment_total and txn.installment_total > 1:
         error = "Edição de transações parceladas desativada."
 
     return templates.TemplateResponse(
         "transactions/edit.html",
-        {"request": request, "user": user, "transaction": txn, "categories": categories, "cards": cards, "error": error},
+        {"request": request, "user": user, "transaction": txn, "categories": categories, "cards": cards, "accounts": accounts, "error": error},
     )
 
 
@@ -218,6 +227,7 @@ def edit_transaction_post(
     notes: str = Form(""),
     category_id: Optional[str] = Form(None),
     credit_card_id: Optional[str] = Form(None),
+    account_id: int = Form(...),
     is_recurring: bool = Form(False),
 ):
     user, redir = _get_user_or_redirect(request, db)
@@ -241,6 +251,7 @@ def edit_transaction_post(
             notes=notes or None,
             category_id=parse_optional_int(category_id),
             credit_card_id=parse_optional_int(credit_card_id),
+            account_id=account_id,
             is_recurring=is_recurring,
         )
         updated = update_transaction(db, transaction_id, user.id, txn_update)
@@ -250,29 +261,32 @@ def edit_transaction_post(
     except ValidationError as e:
         categories = db.query(Category).filter(Category.user_id == user.id).all()
         cards = get_cards(db, user.id)
+        accounts = get_accounts(db, user.id)
         txn = get_transaction(db, transaction_id, user.id)
         msg = e.errors()[0].get("msg") if e.errors() else "Dados inválidos."
         return templates.TemplateResponse(
             "transactions/edit.html",
-            {"request": request, "user": user, "transaction": txn, "categories": categories, "cards": cards, "error": msg},
+            {"request": request, "user": user, "transaction": txn, "categories": categories, "cards": cards, "accounts": accounts, "error": msg},
             status_code=400,
         )
     except ValueError as e:
         categories = db.query(Category).filter(Category.user_id == user.id).all()
         cards = get_cards(db, user.id)
+        accounts = get_accounts(db, user.id)
         txn = get_transaction(db, transaction_id, user.id)
         return templates.TemplateResponse(
             "transactions/edit.html",
-            {"request": request, "user": user, "transaction": txn, "categories": categories, "cards": cards, "error": str(e)},
+            {"request": request, "user": user, "transaction": txn, "categories": categories, "cards": cards, "accounts": accounts, "error": str(e)},
             status_code=400,
         )
     except Exception:
         categories = db.query(Category).filter(Category.user_id == user.id).all()
         cards = get_cards(db, user.id)
+        accounts = get_accounts(db, user.id)
         txn = get_transaction(db, transaction_id, user.id)
         return templates.TemplateResponse(
             "transactions/edit.html",
-            {"request": request, "user": user, "transaction": txn, "categories": categories, "cards": cards, "error": "Falha ao salvar as alterações."},
+            {"request": request, "user": user, "transaction": txn, "categories": categories, "cards": cards, "accounts": accounts, "error": "Falha ao salvar as alterações."},
             status_code=500,
         )
 

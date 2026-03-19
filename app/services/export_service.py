@@ -15,10 +15,11 @@ def export_transactions_csv(
     transactions = get_transactions(db, user_id, start_date, end_date, limit=10000)
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["ID", "Data", "Tipo", "Descrição", "Valor", "Categoria", "Cartão", "Parcela", "Recorrente", "Notas"])
+    writer.writerow(["ID", "Data", "Tipo", "Descrição", "Valor", "Conta", "Categoria", "Cartão", "Parcela", "Recorrente", "Notas"])
     for t in transactions:
         cat_name = t.category.name if t.category else ""
         card_name = t.credit_card.name if t.credit_card else ""
+        acc_name = t.account.name if getattr(t, "account", None) else ""
         parcel = f"{t.installment_current}/{t.installment_total}" if t.installment_total else ""
         writer.writerow([
             t.id,
@@ -26,6 +27,7 @@ def export_transactions_csv(
             "Receita" if t.type == "income" else "Despesa",
             t.description,
             f"{t.amount:.2f}",
+            acc_name,
             cat_name,
             card_name,
             parcel,

@@ -12,6 +12,7 @@ def main() -> None:
     from app.core.database import Base, SessionLocal, engine  # noqa: WPS433
     from app.models.user import User  # noqa: WPS433
     from app.models.category import Category  # noqa: WPS433
+    from app.models.account import Account  # noqa: WPS433
     from app.models.credit_card import CreditCard  # noqa: WPS433
     from app.models.transaction import Transaction  # noqa: WPS433
     from app.models.goal import FinancialGoal  # noqa: WPS433
@@ -99,6 +100,9 @@ def main() -> None:
         )
         assert card, "card not found"
 
+        default_account = db.query(Account).filter(Account.user_id == user.id).order_by(Account.id.desc()).first()
+        assert default_account, "default account not found"
+
         # Create installments transaction (3 rows expected)
         today = datetime.now(timezone.utc).date().isoformat()
         resp = client.post(
@@ -111,12 +115,25 @@ def main() -> None:
                 "notes": "",
                 "category_id": str(expense_cat.id),
                 "credit_card_id": str(card.id),
+                "account_id": str(default_account.id),
                 "installment_total": "3",
                 "is_recurring": "false",
             },
             allow_redirects=False,
         )
-        assert resp.status_code in (302, 303), f"installments create failed: {resp.status_code}"
+        if resp.status_code not in (302, 303):
+            lower = resp.text.lower()
+            markers = ["falha", "dados inválidos".lower(), "inválid".lower(), "valor", "invalid account".lower()]
+            idx = -1
+            for m in markers:
+                pos = lower.find(m)
+                if pos != -1:
+                    idx = pos
+                    break
+            snippet = resp.text[idx:idx+800] if idx != -1 else resp.text[:800]
+            raise AssertionError(
+                f"installments create failed: {resp.status_code}. Snippet: {snippet}"
+            )
 
         txns_after_installments = (
             db.query(Transaction)
@@ -136,6 +153,7 @@ def main() -> None:
                 "notes": "",
                 "category_id": str(expense_cat.id),
                 "credit_card_id": str(card.id),
+                "account_id": str(default_account.id),
                 "installment_total": "",
                 "is_recurring": "false",
             },
@@ -164,6 +182,7 @@ def main() -> None:
                 "notes": "ok",
                 "category_id": str(expense_cat.id),
                 "credit_card_id": str(card.id),
+                "account_id": str(default_account.id),
                 "is_recurring": "false",
             },
             allow_redirects=False,

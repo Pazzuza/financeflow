@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models.category import Category
 from app.models.credit_card import CreditCard
+from app.models.account import Account
 from app.models.transaction import Transaction
 from app.schemas import TransactionCreate, TransactionUpdate
 
@@ -35,8 +36,21 @@ def create_transaction(db: Session, data: TransactionCreate, user_id: int) -> Li
         if not card:
             raise ValueError("Invalid credit card")
 
+    account = (
+        db.query(Account)
+        .filter(Account.id == data.account_id, Account.user_id == user_id)
+        .first()
+    )
+    if not account:
+        raise ValueError("Invalid account")
+
     transactions: List[Transaction] = []
     try:
+        total_amount = float(data.amount)
+        if data.installment_total and data.installment_total > 1:
+            total_amount = float(data.amount) * int(data.installment_total)
+        signed_effect = total_amount if data.type == "income" else -total_amount
+
         if data.installment_total and data.installment_total > 1:
             group_id = str(uuid.uuid4())
             # Semantics: `amount` is per installment.
@@ -48,6 +62,7 @@ def create_transaction(db: Session, data: TransactionCreate, user_id: int) -> Li
                     date=data.date + relativedelta(months=i),
                     notes=data.notes,
                     category_id=data.category_id,
+                    account_id=data.account_id,
                     credit_card_id=data.credit_card_id,
                     user_id=user_id,
                     installment_total=data.installment_total,
@@ -65,6 +80,7 @@ def create_transaction(db: Session, data: TransactionCreate, user_id: int) -> Li
                 date=data.date,
                 notes=data.notes,
                 category_id=data.category_id,
+                account_id=data.account_id,
                 credit_card_id=data.credit_card_id,
                 user_id=user_id,
                 is_recurring=data.is_recurring,
@@ -72,6 +88,7 @@ def create_transaction(db: Session, data: TransactionCreate, user_id: int) -> Li
             db.add(t)
             transactions.append(t)
 
+        account.current_balance = float(account.current_balance) + signed_effect
         db.commit()
         return transactions
     except Exception:
@@ -91,7 +108,7 @@ def get_transactions(
 ) -> List[Transaction]:
     q = (
         db.query(Transaction)
-        .options(joinedload(Transaction.category), joinedload(Transaction.credit_card))
+        .options(joinedload(Transaction.category), joinedload(Transaction.credit_card), joinedload(Transaction.account))
         .filter(Transaction.user_id == user_id)
     )
     if start_date:
@@ -128,12 +145,24 @@ def count_transactions(
 
 
 def delete_transaction(db: Session, transaction_id: int, user_id: int) -> bool:
-    t = db.query(Transaction).filter(
+    t = (
+        db.query(Transaction)
+        .options(joinedload(Transaction.account))
+        .filter(
         Transaction.id == transaction_id,
         Transaction.user_id == user_id
-    ).first()
+        )
+        .first()
+    )
     if not t:
         return False
+
+    if not t.account:
+        return False
+
+    signed_effect = float(t.amount) if t.type == "income" else -float(t.amount)
+    # Reverse the effect.
+    t.account.current_balance = float(t.account.current_balance) - signed_effect
     db.delete(t)
     db.commit()
     return True
@@ -230,14 +259,23 @@ def get_monthly_trend(db: Session, user_id: int, months: int = 6) -> list:
 def get_transaction(db: Session, transaction_id: int, user_id: int) -> Optional[Transaction]:
     return (
         db.query(Transaction)
-        .options(joinedload(Transaction.category), joinedload(Transaction.credit_card))
+        .options(
+            joinedload(Transaction.category),
+            joinedload(Transaction.credit_card),
+            joinedload(Transaction.account),
+        )
         .filter(Transaction.id == transaction_id, Transaction.user_id == user_id)
         .first()
     )
 
 
 def update_transaction(db: Session, transaction_id: int, user_id: int, data: TransactionUpdate) -> Optional[Transaction]:
-    txn = db.query(Transaction).filter(Transaction.id == transaction_id, Transaction.user_id == user_id).first()
+    txn = (
+        db.query(Transaction)
+        .options(joinedload(Transaction.account))
+        .filter(Transaction.id == transaction_id, Transaction.user_id == user_id)
+        .first()
+    )
     if not txn:
         return None
 
@@ -264,6 +302,28 @@ def update_transaction(db: Session, transaction_id: int, user_id: int, data: Tra
             raise ValueError("Invalid credit card")
 
     try:
+        old_account = txn.account
+        if not old_account:
+            raise ValueError("Transaction account missing")
+
+        old_signed = float(txn.amount) if txn.type == "income" else -float(txn.amount)
+        new_signed = float(data.amount) if data.type == "income" else -float(data.amount)
+
+        new_account = (
+            db.query(Account)
+            .filter(Account.id == data.account_id, Account.user_id == user_id)
+            .first()
+        )
+        if not new_account:
+            raise ValueError("Invalid account")
+
+        # Update account balances atomically with the transaction.
+        if old_account.id == new_account.id:
+            old_account.current_balance = float(old_account.current_balance) + (new_signed - old_signed)
+        else:
+            old_account.current_balance = float(old_account.current_balance) - old_signed
+            new_account.current_balance = float(new_account.current_balance) + new_signed
+
         txn.description = data.description
         txn.amount = data.amount
         txn.type = data.type
@@ -271,7 +331,9 @@ def update_transaction(db: Session, transaction_id: int, user_id: int, data: Tra
         txn.notes = data.notes
         txn.category_id = data.category_id
         txn.credit_card_id = data.credit_card_id
+        txn.account_id = data.account_id
         txn.is_recurring = data.is_recurring
+
         db.commit()
         db.refresh(txn)
         return txn

@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.user import User
 from app.models.category import Category
+from app.models.account import Account
 from app.schemas import UserCreate
 from app.core.security import get_password_hash, verify_password, create_access_token
 from typing import Optional
@@ -33,6 +34,19 @@ def create_user(db: Session, data: UserCreate) -> User:
     db.flush()
     for cat in DEFAULT_CATEGORIES:
         db.add(Category(user_id=user.id, is_default=True, **cat))
+    db.commit()
+    db.refresh(user)
+
+    # Create a default cash account so transactions always have an account to attach to.
+    db.add(
+        Account(
+            user_id=user.id,
+            name="Carteira",
+            type="cash",
+            initial_balance=0.0,
+            current_balance=0.0,
+        )
+    )
     db.commit()
     db.refresh(user)
     return user

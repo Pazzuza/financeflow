@@ -85,6 +85,7 @@
             <th style="padding:14px 16px;text-align:left;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Data</th>
             <th style="padding:14px 16px;text-align:left;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Descrição</th>
             <th style="padding:14px 16px;text-align:left;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Categoria</th>
+            <th style="padding:14px 16px;text-align:left;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Conta</th>
             <th style="padding:14px 16px;text-align:left;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Tipo</th>
             <th style="padding:14px 16px;text-align:right;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Valor</th>
             <th style="padding:14px 16px;text-align:right;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Ação</th>
@@ -101,6 +102,9 @@
             </td>
             <td style="padding:14px 16px;font-size:13px;color:#94a3b8;">
               {% if t.category %}{{ t.category.icon }} {{ t.category.name }}{% else %}—{% endif %}
+            </td>
+            <td style="padding:14px 16px;font-size:13px;color:#94a3b8;">
+              {% if t.account %}{{ t.account.name }}{% else %}—{% endif %}
             </td>
             <td style="padding:14px 16px;">
               <span class="{{ 'badge-income' if t.type == 'income' else 'badge-expense' }}">

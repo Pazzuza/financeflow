@@ -169,4 +169,4 @@ Defina as variáveis de ambiente no painel da plataforma:
 
 `DATABASE_URL` (Postgres recomendado) e `SECRET_KEY`.
 
-O `Procfile` já inicia o app com `uvicorn` escutando em `0.0.0.0:$PORT`.
+O `Procfile` executa `python init_db.py`, aplica as migrations com Alembic e então inicia o app com `uvicorn` escutando em `0.0.0.0:$PORT`.

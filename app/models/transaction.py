@@ -14,6 +14,7 @@ class Transaction(Base):
     date = Column(DateTime, nullable=False, default=datetime.utcnow)
     notes = Column(Text, nullable=True)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     credit_card_id = Column(Integer, ForeignKey("credit_cards.id"), nullable=True)
     installment_total = Column(Integer, nullable=True)   # total parcelas
@@ -24,4 +25,5 @@ class Transaction(Base):
 
     user = relationship("User", back_populates="transactions")
     category = relationship("Category", back_populates="transactions")
+    account = relationship("Account", back_populates="transactions")
     credit_card = relationship("CreditCard", back_populates="transactions")

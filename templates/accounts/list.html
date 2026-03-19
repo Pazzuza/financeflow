@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Contas — FinanceFlow{% endblock %}
+
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+    <h1 style="font-size:22px;font-weight:800;color:white;">🏦 Contas</h1>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <a href="/accounts/new" class="btn-primary" style="text-decoration:none;">+ Nova conta</a>
+    </div>
+  </div>
+
+  {% if error %}
+  <div class="alert-box" style="margin-bottom:20px;">⚠️ {{ error }}</div>
+  {% endif %}
+
+  {% if success %}
+  <div class="success-box" style="margin-bottom:20px;">✅ Operação concluída.</div>
+  {% endif %}
+
+  <div style="margin-bottom:24px;">
+    <div style="font-size:13px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px;">
+      Saldo por conta
+    </div>
+    {% if accounts and accounts|length > 0 %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">
+      {% for a in accounts %}
+      <div class="card" style="padding:20px;border-left:4px solid {{ '#10b981' if a.type=='savings' else '#8b5cf6' if a.type=='investment' else '#3b82f6' if a.type=='bank' else '#6366f1' }};">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+          <div style="min-width:0;">
+            <div style="font-size:12px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">
+              {{ a.type }}
+            </div>
+            <div style="font-size:16px;font-weight:900;color:white;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              {{ a.name }}
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px;color:#94a3b8;font-weight:700;">Saldo atual</div>
+            <div style="font-size:18px;font-weight:900;" class="{{ 'amount-positive' if a.current_balance >= 0 else 'amount-negative' }}">
+              R$ {{ "%.2f"|format(a.current_balance)|replace(".", ",") }}
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap;">
+          <a href="/accounts/{{ a.id }}/edit" class="btn-ghost" style="padding:6px 12px;font-size:13px;text-decoration:none;flex:1;text-align:center;">✏️ Editar</a>
+          <form method="post" action="/accounts/{{ a.id }}/delete" style="margin:0;flex:1;">
+            <button type="submit" class="btn-danger" style="width:100%;font-size:13px;padding:6px 12px;" onclick="return confirm('Excluir esta conta?')">🗑️ Excluir</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card" style="padding:40px;text-align:center;color:#94a3b8;">
+      <div style="font-size:42px;margin-bottom:8px;">🏦</div>
+      <div style="font-size:16px;font-weight:800;color:white;margin-bottom:8px;">Nenhuma conta</div>
+      <div style="font-size:14px;margin-bottom:20px;">Crie uma conta para começar a registrar transações.</div>
+      <a href="/accounts/new" class="btn-primary" style="text-decoration:none;">+ Criar conta</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Transfer form -->
+  <div class="card" style="padding:20px;margin-bottom:28px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+      <div>
+        <div style="font-size:15px;font-weight:900;color:white;">🔁 Transferência</div>
+        <div style="font-size:12px;color:#94a3b8;margin-top:4px;">Move saldo entre duas contas</div>
+      </div>
+      <div style="font-size:12px;color:#94a3b8;">Não afeta relatórios de Receita/Despesa</div>
+    </div>
+
+    {% if accounts and accounts|length >= 2 %}
+    <form method="post" action="/accounts/transfer" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end;">
+      <div>
+        <label>De</label>
+        <select name="from_account_id" required>
+          {% for a in accounts %}
+          <option value="{{ a.id }}">{{ a.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Para</label>
+        <select name="to_account_id" required>
+          {% for a in accounts %}
+          <option value="{{ a.id }}">{{ a.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label>Valor (R$)</label>
+        <input type="number" name="amount" step="0.01" min="0.01" placeholder="100.00" required/>
+      </div>
+      <div>
+        <label>Data</label>
+        <input type="date" name="date" required id="transfer_date"/>
+      </div>
+
+      <div style="grid-column:span 2;">
+        <label>Notas (opcional)</label>
+        <textarea name="notes" placeholder="Ex: Transferência para poupança..." rows="2" style="resize:vertical;"></textarea>
+      </div>
+
+      <div style="grid-column:span 2;display:flex;gap:10px;">
+        <button type="submit" class="btn-primary" style="flex:1;padding:12px;justify-content:center;">Confirmar transferência</button>
+      </div>
+    </form>
+    {% else %}
+      <div style="color:#94a3b8;text-align:center;padding:20px 0;">
+        Você precisa de pelo menos <b>2 contas</b> para transferir.
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const d = new Date();
+  const today = d.toISOString().split('T')[0];
+  const el = document.getElementById('transfer_date');
+  if (el) el.value = today;
+</script>
+{% endblock %}
+

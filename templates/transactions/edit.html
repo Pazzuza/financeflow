@@ -80,6 +80,17 @@
       </div>
 
       <div style="margin-bottom:18px;">
+        <label>Conta</label>
+        <select name="account_id" required id="account_select">
+          {% for acc in accounts %}
+          <option value="{{ acc.id }}" {% if transaction.account_id == acc.id %}selected{% endif %}>
+            {{ acc.name }} • {{ acc.type }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="margin-bottom:18px;">
         <label>Categoria</label>
         <select name="category_id" id="category_select">
           <option value="">Sem categoria</option>

@@ -9,6 +9,7 @@ from app.core.security import get_current_user_from_cookie
 from app.services.transaction_service import get_summary, get_expense_by_category, get_monthly_trend, get_transactions
 from app.services.goal_service import get_alerts
 from app.services.card_service import get_cards, get_card_usage
+from app.services.account_service import get_accounts
 
 router = APIRouter(tags=["dashboard"])
 templates = Jinja2Templates(directory="templates")
@@ -39,6 +40,8 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     alerts = get_alerts(db, user.id, unread_only=True)
     cards = get_cards(db, user.id)
     cards_usage = [get_card_usage(db, c.id, user.id) for c in cards]
+    accounts = get_accounts(db, user.id)
+    accounts_total_balance = round(sum(float(a.current_balance) for a in accounts), 2)
 
     # Budget alert check
     if user.monthly_income > 0:
@@ -71,4 +74,6 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         "alerts": alerts,
         "cards_usage": cards_usage,
         "today": today,
+        "accounts": accounts,
+        "accounts_total_balance": accounts_total_balance,
     })

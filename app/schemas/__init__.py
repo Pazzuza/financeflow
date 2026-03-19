@@ -62,6 +62,7 @@ class TransactionCreate(BaseModel):
     notes: Optional[str] = Field(default=None, max_length=2000)
     category_id: Optional[int] = None
     credit_card_id: Optional[int] = None
+    account_id: int
     installment_total: Optional[int] = Field(default=None, ge=1, le=60)
     is_recurring: bool = False
 
@@ -92,6 +93,7 @@ class TransactionOut(BaseModel):
     notes: Optional[str]
     category_id: Optional[int]
     credit_card_id: Optional[int]
+    account_id: int
     installment_total: Optional[int]
     installment_current: Optional[int]
     installment_group: Optional[str]
@@ -168,6 +170,50 @@ class GoalUpdate(BaseModel):
     is_completed: Optional[bool] = None
 
 
+# --- Account ---
+class AccountCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    type: Literal["cash", "bank", "savings", "investment"]
+    initial_balance: float = Field(default=0.0)
+
+
+class AccountUpdate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    type: Literal["cash", "bank", "savings", "investment"]
+    initial_balance: float = Field(default=0.0)
+    current_balance: Optional[float] = None
+
+
+class AccountOut(BaseModel):
+    id: int
+    name: str
+    type: str
+    initial_balance: float
+    current_balance: float
+    created_at: datetime
+
+
+# --- Transfer ---
+class TransferCreate(BaseModel):
+    from_account_id: int
+    to_account_id: int
+    amount: float = Field(gt=0)
+    date: datetime
+    notes: Optional[str] = Field(default=None, max_length=2000)
+
+
+class TransferOut(BaseModel):
+    id: int
+    from_account_id: int
+    to_account_id: int
+    amount: float
+    date: datetime
+    notes: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
 class TransactionUpdate(BaseModel):
     description: str = Field(min_length=1, max_length=255)
     amount: float = Field(gt=0)
@@ -176,6 +222,7 @@ class TransactionUpdate(BaseModel):
     notes: Optional[str] = Field(default=None, max_length=2000)
     category_id: Optional[int] = None
     credit_card_id: Optional[int] = None
+    account_id: int
     is_recurring: bool = False
 
     @field_validator("credit_card_id")

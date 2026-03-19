@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == 'edit' %}Editar conta — FinanceFlow{% else %}Nova conta — FinanceFlow{% endif %}{% endblock %}
+
+{% block content %}
+<div style="max-width:700px;margin:0 auto;">
+  <div style="margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <a href="/accounts" style="color:#94a3b8;font-size:14px;text-decoration:none;">← Voltar</a>
+    <h1 style="font-size:22px;font-weight:900;color:white;margin:0;">{% if mode == 'edit' %}Editar conta{% else %}Nova conta{% endif %}</h1>
+  </div>
+
+  {% if error %}
+  <div class="alert-box" style="margin-bottom:20px;">⚠️ {{ error }}</div>
+  {% endif %}
+
+  <div class="card" style="padding:28px;">
+    <form method="post" action="{% if mode == 'edit' %}/accounts/{{ account.id }}/edit{% else %}/accounts/new{% endif %}">
+      <div style="margin-bottom:18px;">
+        <label>Nome</label>
+        <input type="text" name="name" value="{{ account.name if account else '' }}" required />
+      </div>
+
+      <div style="margin-bottom:18px;">
+        <label>Tipo</label>
+        <select name="type" required>
+          <option value="cash" {% if account and account.type=='cash' %}selected{% endif %}>💵 cash</option>
+          <option value="bank" {% if account and account.type=='bank' %}selected{% endif %}>🏦 bank</option>
+          <option value="savings" {% if account and account.type=='savings' %}selected{% endif %}>📦 savings</option>
+          <option value="investment" {% if account and account.type=='investment' %}selected{% endif %}>📈 investment</option>
+        </select>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;">
+        <div>
+          <label>Saldo inicial (R$)</label>
+          <input type="number" name="initial_balance" step="0.01" min="0" value="{{ account.initial_balance if account else 0 }}" required />
+        </div>
+        <div>
+          <label>Saldo atual (R$)</label>
+          {% if mode == 'edit' %}
+            <input type="number" name="current_balance" step="0.01" value="{{ account.current_balance if account else 0 }}" />
+          {% else %}
+            <input type="number" name="current_balance" step="0.01" value="{{ account.initial_balance if account else 0 }}" disabled style="opacity:0.6;cursor:not-allowed;" />
+          {% endif %}
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary" style="width:100%;justify-content:center;padding:14px;">
+        {% if mode == 'edit' %}Salvar alterações{% else %}Criar conta{% endif %}
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
